@@ -1,6 +1,6 @@
 {
   "name": "@curiositymcp/mcp-frontend-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A frontend implementation of the Curiosity MCP server.",
   "main": "dist/index.umd.js",
   "module": "dist/index.mjs",

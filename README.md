@@ -10,7 +10,7 @@ This is a public beta release of the Curiosity MPC Frontend Server library. It i
 ## Installation
 
 ```bash
-npm install @curiosity/mpc-frontend-server
+npm install @curiositymcp/mpc-frontend-server
 ```
 
 ## Quick Start
@@ -34,7 +34,7 @@ npm install @curiosity/mpc-frontend-server
     </head>
     <body>
         <div id="chat-container"></div>
-        <script src="./node_modules/@curiosity/mpc-frontend-server/dist/index.umd.js"></script>
+        <script src="./node_modules/@curiositymcp/mpc-frontend-server/dist/index.umd.js"></script>
         <script src="./main.js"></script>
     </body>
     </html>
