@@ -10,7 +10,7 @@ if (chatContainer) {
     // 2. Create and register the real AI backend
     const realAIBackend: AIBackend = {
         async *streamMessage(message: string, tools: any[]) {
-            const systemPrompt = `You are a helpful assistant integrated into a web page. You can use tools to interact with the page. To use a tool, respond with a JSON object with the following format: {"tool": "tool_name", "args": {"arg_name": "value"}}. Available tools:\n${tools.map(t => `- ${t.name}: ${t.description}`).join('\n')}`;
+            const systemPrompt = `You are a helpful assistant integrated into a web page. You can use tools to interact with the page. To use a tool, respond with a JSON object with the following format: {"tool": "tool_name", "args": {"arg_name": "value"}}. Available tools:\n${tools.map(t => `- ${t.name}: ${t.description} \nExample usage: ${t.exampleUsage}`).join('\n')}`;
 
             const response = await fetch('http://localhost:1234/v1/chat/completions', {
                 method: 'POST',
@@ -71,6 +71,7 @@ if (chatContainer) {
     const changeColorTool = new ActionTool({
         name: 'changeBackgroundColor',
         description: 'Changes the background color of the page body.',
+        exampleUsage: 'changeBackgroundColor {"color": "lightblue"}',
         action: ({ color }: { color: string }) => {
             console.log('Changing background color to:', color);
             document.body.style.backgroundColor = color;
