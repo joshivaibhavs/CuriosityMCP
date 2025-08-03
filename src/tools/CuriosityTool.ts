@@ -1,21 +1,25 @@
 export type ToolType = 'Action' | 'Query';
 
+export type ToolArgumentDescription = string;
+
 export interface ToolDefinition {
   name: string;
   description: string;
-  exampleUsage: string;
+  arguments?: { [key: string]: ToolArgumentDescription };
 }
 
 export abstract class CuriosityTool {
   readonly name: string;
   readonly description: string;
-  readonly exampleUsage: string;
+  readonly arguments?: { [key: string]: ToolArgumentDescription };
   abstract readonly type: ToolType;
 
   constructor(definition: ToolDefinition) {
     this.name = definition.name;
     this.description = definition.description;
-    this.exampleUsage = definition.exampleUsage;
+    if (definition.arguments) {
+      this.arguments = definition.arguments;
+    }
   }
 
   abstract execute(args: any): Promise<any>;
