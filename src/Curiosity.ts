@@ -1,4 +1,5 @@
 import { AIBackend } from './AIBackend';
+import { CuriosityOptions } from './CuriosityOptions';
 import { CuriosityTool, ActionTool, QueryTool } from './tools/CuriosityTool';
 
 export class Curiosity {
@@ -8,12 +9,21 @@ export class Curiosity {
   private sendButton!: HTMLButtonElement;
   private aiBackend: AIBackend | null = null;
   private tools: CuriosityTool[] = [];
+  #systemPrompt: string = `<system-prompt>You are a helpful assistant.</system-prompt>`;
 
-  constructor(element: HTMLElement) {
+  constructor(element: HTMLElement, options: CuriosityOptions = {}) {
     this.element = element;
     this.render();
     this.injectStyles();
+
+    if (options.systemPrompt) {
+      this.#systemPrompt = `<system-prompt>${options.systemPrompt}</system-prompt>\n<tool-usage>If you have access to any tools, you can use them by including a tool call in your message as given in the <usage> section of each tool. Respond with only the JSON object which adheres to the usage guidelines, including the toolUse and toolName properties. Do not include any formatting.</tool-usage>`;
+    }
     this.setupEventListeners();
+  }
+
+  public get systemPrompt(): string {
+    return this.#systemPrompt;
   }
 
   public registerAIBackend(backend: AIBackend): void {
@@ -26,6 +36,18 @@ export class Curiosity {
       return;
     }
     this.tools.push(tool);
+    let toolDefinition = `
+<tool>
+<name>${tool.name}</name>
+<description>${tool.description}</description>
+<usage>\n`;
+    if (tool.arguments) {
+      toolDefinition += JSON.stringify({ toolUse: true, toolName: tool.name, args: tool.arguments });
+    } else {
+      toolDefinition += JSON.stringify({ toolUse: true, toolName: tool.name });
+    }
+    toolDefinition += `\n</usage>`;
+    this.#systemPrompt += toolDefinition;
   }
 
   private render(): void {
@@ -70,13 +92,11 @@ export class Curiosity {
     const aiMessageElement = this.createStreamedMessageElement();
 
     try {
-      for await (const chunk of this.aiBackend.streamMessage(messageText, this.tools)) {
+      for await (const chunk of this.aiBackend.streamMessage(messageText)) {
         fullResponse += chunk;
         aiMessageElement.textContent = fullResponse; // Update UI as chunks arrive
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
       }
-
-      console.log('Full response:', fullResponse);
 
       // Check if the complete response is a tool call
       const toolCall = this.tryParseToolCall(fullResponse);
@@ -90,11 +110,11 @@ export class Curiosity {
     }
   }
 
-  private tryParseToolCall(text: string): { tool: string; args: any } | null {
+  private tryParseToolCall(text: string): { toolName: string; args: any } | null {
     try {
       const json = JSON.parse(text);
       console.log('Parsed JSON:', json);
-      if (json && typeof json.tool === 'string' && json.args !== undefined) {
+      if (json && typeof json === 'object' && 'toolUse' in json && 'toolName' in json) {
         return json;
       }
       return null;
@@ -103,10 +123,11 @@ export class Curiosity {
     }
   }
 
-  private async handleToolCall(toolCall: { tool: string; args: any }): Promise<void> {
-    const tool = this.tools.find((t) => t.name === toolCall.tool);
+  private async handleToolCall(toolCall: { toolName: string; args: any }): Promise<void> {
+    console.log('Handling tool call:', toolCall);
+    const tool = this.tools.find((t) => t.name === toolCall.toolName);
     if (!tool) {
-      this.displayMessage(`Tool "${toolCall.tool}" not found.`, 'ai');
+      this.displayMessage(`Tool "${toolCall.toolName}" not found.`, 'ai');
       return;
     }
 
