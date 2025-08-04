@@ -1,10 +1,10 @@
-# Curiosity MPC Frontend Server
+# Curiosity MCP Frontend Server
 
 A simple, embeddable chat UI component that connects to a streaming AI backend and supports frontend tools.
 
 **Public Beta Notice**
 
-This is a public beta release of the Curiosity MPC Frontend Server library. It is intended for testing and feedback purposes. While it should work in most cases, it may not be fully stable and could break in some instances. Please use with caution and report any issues you encounter.
+This is a public beta release of the Curiosity MCP Frontend Server library. It is intended for testing and feedback purposes. While it should work in most cases, it may not be fully stable and could break in some instances. Please use with caution and report any issues you encounter.
 
 
 ## Installation
@@ -34,7 +34,7 @@ npm insatll @curiositymcp/mcp-frontend-server
     </head>
     <body>
         <div id="chat-container"></div>
-        <script src="./node_modules/@curiositymcp/mpc-frontend-server/dist/index.umd.js"></script>
+        <script src="./node_modules/@curiositymcp/mcp-frontend-server/dist/index.umd.js"></script>
         <script src="./main.js"></script>
     </body>
     </html>
@@ -47,7 +47,7 @@ npm insatll @curiositymcp/mcp-frontend-server
     const chatContainer = document.getElementById('chat-container');
 
     // 1. Initialize the Curiosity UI
-    const curiosity = new CuriosityMPC.Curiosity(chatContainer);
+    const curiosity = new CuriosityMCP.Curiosity(chatContainer);
 
     // 2. Create and register a mock AI backend
     const mockAIBackend = {
@@ -70,7 +70,7 @@ npm insatll @curiositymcp/mcp-frontend-server
     curiosity.registerAIBackend(mockAIBackend);
 
     // 3. Create and register a tool
-    const changeColorTool = new CuriosityMPC.ActionTool({
+    const changeColorTool = new CuriosityMCP.ActionTool({
         name: 'changeBackgroundColor',
         description: 'Changes the background color of the page body.',
         action: ({ color }) => {

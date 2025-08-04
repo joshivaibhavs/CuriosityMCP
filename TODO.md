@@ -1,6 +1,6 @@
-# TODO: @Curiosity/mpc-frontend-server
+# TODO: @Curiosity/mcp-frontend-server
 
-This document outlines the plan for creating the `@Curiosity/mpc-frontend-server` NPM package.
+This document outlines the plan for creating the `@Curiosity/mcp-frontend-server` NPM package.
 
 ## Phase 1: Project Setup & Core Structure
 

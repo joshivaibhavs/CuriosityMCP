@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "test": "jest",
-    "build": "esbuild src/index.ts --bundle --platform=browser --format=esm --outfile=dist/index.mjs && esbuild src/index.ts --bundle --platform=browser --format=iife --global-name=CuriosityMPC --outfile=dist/index.umd.js"
+    "build": "esbuild src/index.ts --bundle --platform=browser --format=esm --outfile=dist/index.mjs && esbuild src/index.ts --bundle --platform=browser --format=iife --global-name=CuriosityMCP --outfile=dist/index.umd.js"
   },
   "keywords": [
     "curiosity",
