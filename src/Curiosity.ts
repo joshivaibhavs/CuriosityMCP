@@ -9,7 +9,9 @@ export class Curiosity {
   private sendButton!: HTMLButtonElement;
   private aiBackend: AIBackend | null = null;
   private tools: CuriosityTool[] = [];
-  #systemPrompt: string = `<system-prompt>You are a helpful assistant.</system-prompt>`;
+  #toolUsagePromptSection =
+    '\n<tool-usage>If you have access to any tools, you can use them by including a tool call in your message as given in the <usage> section of each tool. Respond with only the JSON object which adheres to the usage guidelines, including the toolUse and toolName properties. Do not include any formatting.</tool-usage>';
+  #systemPrompt: string = `<system-prompt>You are a helpful assistant.</system-prompt>${this.#toolUsagePromptSection}`;
 
   constructor(element: HTMLElement, options: CuriosityOptions = {}) {
     this.element = element;
@@ -17,7 +19,7 @@ export class Curiosity {
     this.injectStyles();
 
     if (options.systemPrompt) {
-      this.#systemPrompt = `<system-prompt>${options.systemPrompt}</system-prompt>\n<tool-usage>If you have access to any tools, you can use them by including a tool call in your message as given in the <usage> section of each tool. Respond with only the JSON object which adheres to the usage guidelines, including the toolUse and toolName properties. Do not include any formatting.</tool-usage>`;
+      this.#systemPrompt = `<system-prompt>${options.systemPrompt}</system-prompt>${this.#toolUsagePromptSection}`;
     }
     this.setupEventListeners();
   }
