@@ -10,7 +10,7 @@ This is a public beta release of the Curiosity MPC Frontend Server library. It i
 ## Installation
 
 ```bash
-npm install @curiositymcp/mpc-frontend-server
+npm insatll @curiositymcp/mcp-frontend-server
 ```
 
 ## Quick Start
@@ -51,7 +51,7 @@ npm install @curiositymcp/mpc-frontend-server
 
     // 2. Create and register a mock AI backend
     const mockAIBackend = {
-        async *streamMessage(message, tools) {
+        async *streamMessage(message) {
             // Check if the user is asking to use a tool
             if (message.toLowerCase().includes('change background')) {
                 // AI decides to use a tool
