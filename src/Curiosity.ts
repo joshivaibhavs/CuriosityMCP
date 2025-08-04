@@ -94,7 +94,15 @@ export class Curiosity {
     const aiMessageElement = this.createStreamedMessageElement();
 
     try {
-      for await (const chunk of this.aiBackend.streamMessage(messageText)) {
+      for await (const { text: chunk, isReasoning } of this.aiBackend.streamMessage(messageText)) {
+        if (isReasoning) {
+          aiMessageElement.textContent = 'Thinking...';
+          continue; // Skip displaying reasoning chunks
+        }
+        if (!chunk) continue; // Skip empty chunks
+        if (fullResponse.startsWith('Thinking...')) {
+          fullResponse = ''; // Reset if we were previously thinking
+        }
         fullResponse += chunk;
         aiMessageElement.textContent = fullResponse; // Update UI as chunks arrive
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
@@ -113,9 +121,12 @@ export class Curiosity {
   }
 
   private tryParseToolCall(text: string): { toolName: string; args: any } | null {
+    if (text.includes('```')) {
+      // If the response is wrapped in code blocks, remove them
+      text = text.replace(/```json|```/g, '').trim();
+    }
     try {
       const json = JSON.parse(text);
-      console.log('Parsed JSON:', json);
       if (json && typeof json === 'object' && 'toolUse' in json && 'toolName' in json) {
         return json;
       }
@@ -126,7 +137,6 @@ export class Curiosity {
   }
 
   private async handleToolCall(toolCall: { toolName: string; args: any }): Promise<void> {
-    console.log('Handling tool call:', toolCall);
     const tool = this.tools.find((t) => t.name === toolCall.toolName);
     if (!tool) {
       this.displayMessage(`Tool "${toolCall.toolName}" not found.`, 'ai');

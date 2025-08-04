@@ -1,4 +1,4 @@
-import { Curiosity, AIBackend, ActionTool } from '../src/index';
+import { Curiosity, AIBackend, ActionTool, DeepSeekReasoningSeparator } from '../src/index';
 
 // Get the container element from the HTML
 const chatContainer = document.getElementById('curiosity-container');
@@ -11,14 +11,16 @@ if (chatContainer) {
   const realAIBackend: AIBackend = {
     async *streamMessage(message: string) {
       const systemPrompt = curiosity.systemPrompt;
+      const deepSeekReasoningSeparator = new DeepSeekReasoningSeparator();
 
-      const response = await fetch('http://localhost:1234/v1/chat/completions', { // Use the LM Studio (https://lmstudio.ai) server endpoint
+      const response = await fetch('http://localhost:1234/v1/chat/completions', {
+        // Use the LM Studio (https://lmstudio.ai) server endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.2-1b-instruct',
+          model: 'deepseek-r1-distill-llama-8b',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: message },
@@ -53,10 +55,8 @@ if (chatContainer) {
             }
             try {
               const json = JSON.parse(data);
-              const content = json.choices[0]?.delta?.content;
-              if (content) {
-                yield content;
-              }
+              const { isReasoning, text } = deepSeekReasoningSeparator.processChatResponse(json);
+              yield { text, isReasoning };
             } catch (e) {
               console.error('Error parsing stream data:', e);
             }

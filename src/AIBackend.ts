@@ -4,5 +4,5 @@ export interface AIBackend {
    * @param message The user's message to send to the AI.
    * @returns An async generator that yields the AI's response in chunks. This can be text or a JSON string for a tool call.
    */
-  streamMessage(message: string): AsyncGenerator<string>;
+  streamMessage(message: string): AsyncGenerator<{ text: string; isReasoning?: boolean }>;
 }
