@@ -1,6 +1,6 @@
 {
   "name": "@curiositymcp/mcp-frontend-server",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "A frontend implementation of the Curiosity MCP server.",
   "main": "dist/index.umd.js",
   "module": "dist/index.mjs",
@@ -18,7 +18,9 @@
     "frontend",
     "server"
   ],
-  "author": "",
+  "repository": "https://github.com/joshivaibhavs/CuriosityMCP",
+  "homepage": "https://github.com/joshivaibhavs/CuriosityMCP#readme",
+  "author": "Vaibhav Joshi",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^30.0.0",
