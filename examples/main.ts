@@ -12,7 +12,7 @@ if (chatContainer) {
     async *streamMessage(message: string) {
       const systemPrompt = curiosity.systemPrompt;
 
-      const response = await fetch('http://localhost:1234/v1/chat/completions', {
+      const response = await fetch('http://localhost:1234/v1/chat/completions', { // Use the LM Studio (https://lmstudio.ai) server endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
