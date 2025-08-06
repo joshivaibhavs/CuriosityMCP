@@ -8,11 +8,9 @@ This is a public beta release of the Curiosity MCP Frontend Server library. It i
 
 ## Automate your users' journeys with a chat agent!
 
-### Demo:
+### Demo
 
-<video src="./assets/Curiosity-MCP-demo.mp4" controls>
-    Your browser does not support the video tag.
-</video>
+![Curiosity MCP Frontend Demo](./assets/Curiosity-MCP-demo.gif)
 
 ## Installation
 
