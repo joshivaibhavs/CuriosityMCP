@@ -15,23 +15,47 @@ export class Curiosity {
   private sendButton!: HTMLButtonElement;
   private aiBackend: AIBackend | null = null;
   private tools: CuriosityTool[] = [];
+  private messages: Message[] = [];
+  private readonly styles: { [key: string]: string } = {};
   #toolUsagePromptSection =
-    '\n<tool-usage>If you have access to any tools, you can use them by including a tool call in your message as given in the <usage> section of each tool. Respond with only the JSON object which adheres to the usage guidelines, including the toolUse and toolName properties. Do not include any formatting.</tool-usage>';
-  #systemPrompt: string = `<system-prompt>You are a helpful assistant.</system-prompt>${this.#toolUsagePromptSection}`;
+    '\n<tool-usage>If you have access to any tools, you can use them by including a tool call in your message as given in the <usage> section of each tool. Respond with the JSON object which adheres to the usage guidelines, including the toolUse and toolName properties. Wrap the <usage> section in a [TOOL_REQUEST] tag as shown in the example. Example:\n[TOOL_REQUEST]{"toolUse": true, "toolName": "exampleTool"}[END_TOOL_REQUEST]</tool-usage>';
+  #toolsPrompt = '';
+  #systemPrompt: string = `<system-prompt>You are a helpful assistant.</system-prompt>${this.toolUsagePromptSection}`;
 
   constructor(element: HTMLElement, options: CuriosityOptions = {}) {
     this.element = element;
     this.render();
-    this.injectStyles();
 
     if (options.systemPrompt) {
-      this.#systemPrompt = `<system-prompt>${options.systemPrompt}</system-prompt>${this.#toolUsagePromptSection}`;
+      this.#systemPrompt = `<system-prompt>${options.systemPrompt}</system-prompt>${this.toolUsagePromptSection}`;
     }
+
+    if (options.styles) {
+      Object.assign(this.styles, options.styles);
+    }
+    this.injectStyles();
     this.setupEventListeners();
   }
 
+  private get toolUsagePromptSection(): string {
+    if (this.tools.length === 0) {
+      return '';
+    }
+    return this.#toolUsagePromptSection;
+  }
+
+  private constructSystemPrompt(): string {
+    let prompt = this.#systemPrompt;
+    if (this.tools.length > 0) {
+      prompt += this.toolUsagePromptSection;
+      prompt += this.#toolsPrompt;
+    }
+    prompt += `<today>${new Date().toISOString()}</today>`;
+    return prompt;
+  }
+
   public get systemPrompt(): string {
-    return this.#systemPrompt;
+    return this.constructSystemPrompt();
   }
 
   public registerAIBackend(backend: AIBackend): void {
@@ -48,14 +72,14 @@ export class Curiosity {
 <tool>
 <name>${tool.name}</name>
 <description>${tool.description}</description>
-<usage>\n`;
+<usage>\n[TOOL_REQUEST]`;
     if (tool.arguments) {
       toolDefinition += JSON.stringify({ toolUse: true, toolName: tool.name, args: tool.arguments });
     } else {
       toolDefinition += JSON.stringify({ toolUse: true, toolName: tool.name });
     }
-    toolDefinition += `\n</usage>`;
-    this.#systemPrompt += toolDefinition;
+    toolDefinition += `[END_TOOL_REQUEST]\n</usage>`;
+    this.#toolsPrompt += toolDefinition;
   }
 
   private render(): void {
@@ -82,16 +106,16 @@ export class Curiosity {
     });
   }
 
-  private async handleSendMessage(messageText: string = this.input.value.trim()): Promise<void> {
-    if (!messageText) return;
+  private async handleSendMessage(content: string = this.input.value.trim(), role: Sender = 'user'): Promise<void> {
+    if (!content) return;
 
     if (this.input.value) {
-      this.displayMessage(messageText, 'user');
+      this.displayMessage(content, role);
       this.input.value = '';
     }
 
     if (!this.aiBackend) {
-      this.displayMessage('No AI backend registered.', 'ai');
+      this.displayMessage('No AI backend registered.', 'assistant');
       console.error('Curiosity Error: No AI backend has been registered. Use `registerAIBackend`.');
       return;
     }
@@ -99,8 +123,13 @@ export class Curiosity {
     let fullResponse = '';
     const aiMessageElement = this.createStreamedMessageElement();
 
+    if (this.messages.length === 0) {
+      this.messages.push({ role: 'system', content: this.systemPrompt });
+    }
+    this.messages.push({ role, content });
+
     try {
-      for await (const chunk of this.aiBackend.streamMessage(messageText)) {
+      for await (const chunk of this.aiBackend.streamMessage(this.messages)) {
         fullResponse += chunk;
         aiMessageElement.textContent = fullResponse; // Update UI as chunks arrive
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
@@ -108,9 +137,16 @@ export class Curiosity {
 
       // Check if the complete response is a tool call
       const toolCall = this.tryParseToolCall(fullResponse);
-      if (toolCall) {
+      if (toolCall && 'toolCallFailed' in toolCall) {
+        aiMessageElement.textContent = 'A tool call was requested by the AI, but it could not be parsed correctly, as the AI responded with a malformed request. Please try again.';
+        aiMessageElement.classList.add('curiosity-message-tool-error');
+        console.error('Curiosity Error: Tool call parsing failed.', fullResponse);
+        return;
+      } else if (toolCall) {
         aiMessageElement.remove(); // Remove the JSON from chat
-        await this.handleToolCall(toolCall);
+        await this.handleToolCall(toolCall as { toolName: string; args: any }, content);
+      } else {
+        this.messages.push({ role: 'assistant', content: fullResponse });
       }
     } catch (error) {
       aiMessageElement.textContent = 'An error occurred while fetching the response.';
@@ -118,44 +154,51 @@ export class Curiosity {
     }
   }
 
-  private tryParseToolCall(text: string): { toolName: string; args: any } | null {
+  private tryParseToolCall(text: string): { toolName: string; args: any } | { toolCallFailed: true } | null {
+    if (!text || !text.includes('[TOOL_REQUEST]') || !text.includes('[END_TOOL_REQUEST]')) return null;
+    const toolCallRegex = /\[TOOL_REQUEST\](.*?)\[END_TOOL_REQUEST\]/s;
+    const match = text.match(toolCallRegex);
+    if (!match || match.length < 2) return null;
     try {
-      const json = JSON.parse(text);
-      console.log('Parsed JSON:', json);
+      // const cleanedText = text.replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/, '$1').trim();
+      const cleanedText = match[1].trim();
+      if (!cleanedText) return null;
+      // Parse the JSON object
+      const json = JSON.parse(cleanedText);
       if (json && typeof json === 'object' && 'toolUse' in json && 'toolName' in json) {
         return json;
+      } else {
+        throw new Error('Invalid tool call format');
       }
       return null;
     } catch (e) {
-      return null;
+      return { toolCallFailed: true };
     }
   }
 
-  private async handleToolCall(toolCall: { toolName: string; args: any }): Promise<void> {
-    console.log('Handling tool call:', toolCall);
+  private async handleToolCall(toolCall: { toolName: string; args: any }, userMessage: string): Promise<void> {
     const tool = this.tools.find((t) => t.name === toolCall.toolName);
     if (!tool) {
-      this.displayMessage(`Tool "${toolCall.toolName}" not found.`, 'ai');
+      this.displayMessage(`Tool "${toolCall.toolName}" not found.`, 'assistant');
       return;
     }
 
     try {
-      this.displayMessage(`Using tool: ${tool.name}...`, 'ai');
+      this.displayMessage(`Using tool: ${tool.name}...`, 'assistant');
       const result = await tool.execute(toolCall.args);
 
       if (tool instanceof QueryTool) {
         // For QueryTool, send the result back to the AI for the next response.
-        const toolResponseMessage = `Tool ${tool.name} returned: ${JSON.stringify(result)}`;
-        await this.handleSendMessage(toolResponseMessage);
+        await this.handleSendMessage(`<tool-response>${JSON.stringify(result)}</tool-response>`, 'tool');
       }
       // For ActionTool, the action is complete, and the conversation stops here.
     } catch (error) {
-      this.displayMessage(`Error executing tool "${tool.name}".`, 'ai');
+      this.displayMessage(`Error executing tool "${tool.name}".`, 'assistant');
       console.error(`Curiosity Error: Tool execution failed for ${tool.name}.`, error);
     }
   }
 
-  private displayMessage(text: string, sender: 'user' | 'ai'): void {
+  private displayMessage(text: string, sender: Sender): void {
     const messageElement = document.createElement('div');
     messageElement.classList.add('curiosity-message', `curiosity-message-${sender}`);
     messageElement.textContent = text;
@@ -196,7 +239,7 @@ export class Curiosity {
                 word-wrap: break-word;
             }
             .curiosity-message-user {
-                background-color: #007bff;
+                background-color: ${this.styles?.backgroundColor || '#007bff'};
                 color: white;
                 align-self: flex-end;
                 border-bottom-right-radius: 0;
@@ -206,6 +249,28 @@ export class Curiosity {
                 color: #333;
                 align-self: flex-start;
                 border-bottom-left-radius: 0;
+            }
+            .curiosity-message-tool {
+                background-color: #e0f7fa;
+                color: #006064;
+                align-self: flex-start;
+                border-bottom-left-radius: 0;
+            }
+            .curiosity-message-tool-error {
+              background-color: #ffebee;
+              color: #b71c1c;
+              align-self: flex-start;
+              border-bottom-left-radius: 0;
+            }
+            .curiosity-message-tool-error::before {
+              content: 'Tool Error: ';
+              font-weight: bold;
+              color: #b71c1c;
+            }
+            .curiosity-message-tool::before {
+              content: 'Tool Response: ';
+              font-weight: bold;
+              color: #006064;
             }
             .curiosity-input-area {
                 display: flex;
@@ -223,14 +288,14 @@ export class Curiosity {
             .curiosity-send-button {
                 padding: 0.5rem 1rem;
                 border: none;
-                background-color: #007bff;
+                background-color: ${this.styles?.backgroundColor || '#007bff'};
                 color: white;
                 border-radius: 15px;
                 cursor: pointer;
                 font-weight: bold;
             }
             .curiosity-send-button:hover {
-                background-color: #0056b3;
+                background-color: ${this.styles?.backgroundColorHover || '#0056b3'};
             }
         `;
     document.head.appendChild(style);
