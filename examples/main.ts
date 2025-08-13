@@ -1,4 +1,48 @@
-import { Curiosity, AIBackend, ActionTool } from '../src/index';
+import { Curiosity, AIBackend, ActionTool, Message } from '../src/index';
+
+const colorPicker = document.querySelector('#color-picker') as HTMLInputElement;
+
+function colorNameToHex(element: HTMLElement): string | null {
+  const computedColor = window.getComputedStyle(element).backgroundColor;
+  if (!computedColor) {
+    return null;
+  }
+  const rgbMatch = computedColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if (!rgbMatch) {
+    return null;
+  }
+  const r = parseInt(rgbMatch[1]);
+  const g = parseInt(rgbMatch[2]);
+  const b = parseInt(rgbMatch[3]);
+  const toHex = (c: number) => {
+    const hex = c.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+// Extend the Window interface to include changeColor
+declare global {
+  interface Window {
+    changeColor: (color: string) => void;
+  }
+}
+
+function changeColor(color: string): void {
+  document.body.style.backgroundColor = color;
+  colorPicker.value = colorNameToHex(document.body) || '#FFFFFF';
+}
+
+(function () {
+  if (!colorPicker) {
+    console.error('Color picker input not found. Please ensure it exists in the HTML.');
+    return;
+  }
+  colorPicker.addEventListener('change', (event) => {
+    changeColor((event.target as HTMLInputElement).value);
+  });
+})();
 
 // Get the container element from the HTML
 const chatContainer = document.getElementById('curiosity-container');
@@ -9,20 +53,18 @@ if (chatContainer) {
 
   // 2. Create and register the real AI backend
   const realAIBackend: AIBackend = {
-    async *streamMessage(message: string) {
+    async *streamMessage(messages: Message[]): AsyncGenerator<string> {
       const systemPrompt = curiosity.systemPrompt;
 
-      const response = await fetch('http://localhost:1234/v1/chat/completions', { // Use the LM Studio (https://lmstudio.ai) server endpoint
+      const response = await fetch('http://localhost:1234/v1/chat/completions', {
+        // Use the LM Studio (https://lmstudio.ai) server endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.2-1b-instruct',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message },
-          ],
+          model: 'gemma-3-12b-it',
+          messages,
           temperature: 0.7,
           max_tokens: -1,
           stream: true,
@@ -77,15 +119,13 @@ if (chatContainer) {
     action: (args: { [color: string]: string }) => {
       let color;
       for (const argName in args) {
-        console.log('Arg name:', argName, 'arg:', args[argName]);
         if (argName.toLowerCase().includes('color') || argName.toLowerCase().includes('value')) {
           color = args[argName];
           break;
         }
       }
       if (!color) return;
-      console.log('Changing background color to:', color);
-      document.body.style.backgroundColor = color;
+      changeColor(color);
     },
   });
   curiosity.registerTool(changeColorTool);
