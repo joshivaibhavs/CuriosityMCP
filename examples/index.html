@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Curiosity MCP Frontend Server - Example</title>
     <style>
-        body { font-family: sans-serif; padding: 2rem; }
-        #curiosity-container { border: 1px solid #ccc; border-radius: 8px; height: 500px; }
+      body {
+        font-family: sans-serif;
+        padding: 2rem;
+      }
+      #curiosity-container {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        height: 500px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <section>
+      <h1>Tools</h1>
+      <h3>Change color</h3>
+      <input type="color" name="color" id="color-picker" value="#ffffff" />
+    </section>
+    <hr />
     <h1>Curiosity MCP Frontend Server Test</h1>
     <p>The Curiosity chat interface should appear below:</p>
     <div id="curiosity-container"></div>
     <script src="main.js"></script>
-</body>
+  </body>
 </html>
