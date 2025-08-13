@@ -56,7 +56,8 @@ npm insatll @curiositymcp/mcp-frontend-server
 
     // 2. Create and register a mock AI backend
     const mockAIBackend = {
-      async *streamMessage(message) {
+      async *streamMessage(messages) {
+        const message = messages[messages.length - 1];
         // Check if the user is asking to use a tool
         if (message.toLowerCase().includes('change background')) {
           // AI decides to use a tool
