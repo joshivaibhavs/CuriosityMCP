@@ -2,6 +2,12 @@ import { AIBackend } from './AIBackend';
 import { CuriosityOptions } from './CuriosityOptions';
 import { CuriosityTool, ActionTool, QueryTool } from './tools/CuriosityTool';
 
+export type Sender = 'user' | 'assistant' | 'tool';
+
+export interface Message {
+  role: Sender | 'system';
+  content: string;
+}
 export class Curiosity {
   private element: HTMLElement;
   private messagesContainer!: HTMLDivElement;
