@@ -1,3 +1,7 @@
 export interface CuriosityOptions {
-    systemPrompt?: string;
+  systemPrompt?: string;
+  styles?: {
+    backgroundColor?: string;
+    backgroundColorHover?: string;
+  };
 }
