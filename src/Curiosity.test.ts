@@ -1,4 +1,4 @@
-import { Curiosity } from './Curiosity';
+import { Curiosity, Message } from './Curiosity';
 import { AIBackend } from './AIBackend';
 import { ActionTool, QueryTool } from './tools/CuriosityTool';
 
@@ -8,7 +8,8 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 // Helper to create a mock AI backend
 const createMockAIBackend = (responses: { [message: string]: () => AsyncGenerator<string> }): AIBackend => {
   return {
-    streamMessage: jest.fn((message: string) => {
+    streamMessage: jest.fn((messages: Message[]) => {
+      const message = messages[messages.length - 1].content;
       if (responses[message]) {
         return responses[message]();
       }
@@ -70,7 +71,7 @@ describe('Curiosity', () => {
       sendButton.click();
       await tick();
 
-      const aiMessage = chatContainer.querySelector('.curiosity-message-ai');
+      const aiMessage = chatContainer.querySelector('.curiosity-message-assistant');
       expect(aiMessage?.textContent).toBe('No AI backend registered.');
       expect(console.error).toHaveBeenCalledWith('Curiosity Error: No AI backend has been registered. Use `registerAIBackend`.');
     });
@@ -87,9 +88,9 @@ describe('Curiosity', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for stream to finish
 
-      const aiMessage = chatContainer.querySelector('.curiosity-message-ai');
+      const aiMessage = chatContainer.querySelector('.curiosity-message-assistant');
       expect(aiMessage?.textContent).toBe('Echo: Hello AI');
-      expect(mockBackend.streamMessage).toHaveBeenCalledWith('Hello AI');
+      expect((mockBackend.streamMessage as jest.Mock).mock.calls[0][0]).toEqual(expect.arrayContaining([{ content: 'Hello AI', role: 'user' }]));
     });
   });
 
@@ -119,7 +120,7 @@ describe('Curiosity', () => {
       const tool = new ActionTool({ name: 'doAction', description: 'Performs an action', action: actionFn });
       const mockBackend = createMockAIBackend({
         'use the action tool': async function* () {
-          yield JSON.stringify({ toolUse: true, toolName: 'doAction', args: { payload: 'test' } });
+          yield `[TOOL_REQUEST]${JSON.stringify({ toolUse: true, toolName: 'doAction', args: { payload: 'test' } })}[END_TOOL_REQUEST]`;
         },
       });
 
@@ -132,10 +133,10 @@ describe('Curiosity', () => {
       const sendButton = chatContainer.querySelector<HTMLButtonElement>('.curiosity-send-button')!;
       sendButton.click();
 
-      await tick();
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for stream to finish
 
       expect(actionFn).toHaveBeenCalledWith({ payload: 'test' });
-      const messages = chatContainer.querySelectorAll('.curiosity-message-ai');
+      const messages = chatContainer.querySelectorAll('.curiosity-message-assistant');
       expect(messages[messages.length - 1].textContent).toBe('Using tool: doAction...');
     });
 
@@ -144,9 +145,9 @@ describe('Curiosity', () => {
       const tool = new QueryTool({ name: 'doQuery', description: 'Performs a query', query: queryFn });
       const mockBackend = createMockAIBackend({
         'use the query tool': async function* () {
-          yield JSON.stringify({ toolUse: true, toolName: 'doQuery', args: { query: 'info' } });
+          yield `[TOOL_REQUEST]\n${JSON.stringify({ toolUse: true, toolName: 'doQuery', args: { query: 'info' } })}\n[END_TOOL_REQUEST]`;
         },
-        'Tool doQuery returned: "some data"': async function* () {
+        '<tool-response>"some data"</tool-response>': async function* () {
           yield 'AI response after query';
         },
       });
@@ -160,13 +161,12 @@ describe('Curiosity', () => {
       const sendButton = chatContainer.querySelector<HTMLButtonElement>('.curiosity-send-button')!;
       sendButton.click();
 
-      await tick();
-      await tick(); // Wait for both tool and AI response
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(queryFn).toHaveBeenCalledWith({ query: 'info' });
       expect(mockBackend.streamMessage).toHaveBeenCalledTimes(2);
-      expect(mockBackend.streamMessage).toHaveBeenLastCalledWith('Tool doQuery returned: "some data"');
-      const aiMessages = chatContainer.querySelectorAll('.curiosity-message-ai');
+      expect((mockBackend.streamMessage as jest.Mock).mock.calls[1][0]).toEqual(expect.arrayContaining([{ role: 'tool', content: '<tool-response>"some data"</tool-response>' }]));
+      const aiMessages = chatContainer.querySelectorAll('.curiosity-message-assistant');
       expect(aiMessages[aiMessages.length - 2].textContent).toBe('Using tool: doQuery...');
       expect(aiMessages[aiMessages.length - 1].textContent).toBe('AI response after query');
     });
@@ -174,7 +174,7 @@ describe('Curiosity', () => {
     it('should display an error if a non-existent tool is called', async () => {
       const mockBackend = createMockAIBackend({
         'use bad tool': async function* () {
-          yield JSON.stringify({ toolUse: true, toolName: 'nonExistentTool', args: {} });
+          yield `[TOOL_REQUEST]\n${JSON.stringify({ toolUse: true, toolName: 'nonExistentTool', args: {} })}\n[END_TOOL_REQUEST]`;
         },
       });
 
@@ -188,7 +188,7 @@ describe('Curiosity', () => {
 
       await tick();
 
-      const messages = chatContainer.querySelectorAll('.curiosity-message-ai');
+      const messages = chatContainer.querySelectorAll('.curiosity-message-assistant');
       expect(messages[messages.length - 1].textContent).toBe('Tool "nonExistentTool" not found.');
     });
   });
