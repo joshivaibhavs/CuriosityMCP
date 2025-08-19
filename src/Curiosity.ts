@@ -208,7 +208,7 @@ export class Curiosity {
 
   private createStreamedMessageElement(): HTMLDivElement {
     const messageElement = document.createElement('div');
-    messageElement.classList.add('curiosity-message', 'curiosity-message-ai');
+    messageElement.classList.add('curiosity-message', `curiosity-message-assistant`);
     this.messagesContainer.appendChild(messageElement);
     return messageElement;
   }
@@ -244,7 +244,7 @@ export class Curiosity {
                 align-self: flex-end;
                 border-bottom-right-radius: 0;
             }
-            .curiosity-message-ai {
+            .curiosity-message-assistant {
                 background-color: #f1f1f1;
                 color: #333;
                 align-self: flex-start;
