@@ -144,7 +144,7 @@ export class Curiosity {
         return;
       } else if (toolCall) {
         aiMessageElement.remove(); // Remove the JSON from chat
-        await this.handleToolCall(toolCall as { toolName: string; args: any }, content);
+        await this.handleToolCall(toolCall as { toolName: string; args: any });
       } else {
         this.messages.push({ role: 'assistant', content: fullResponse });
       }
@@ -176,7 +176,7 @@ export class Curiosity {
     }
   }
 
-  private async handleToolCall(toolCall: { toolName: string; args: any }, userMessage: string): Promise<void> {
+  private async handleToolCall(toolCall: { toolName: string; args: any }): Promise<void> {
     const tool = this.tools.find((t) => t.name === toolCall.toolName);
     if (!tool) {
       this.displayMessage(`Tool "${toolCall.toolName}" not found.`, 'assistant');
